@@ -1,0 +1,114 @@
+---
+title: "HW3"
+author: "Avery Loftin"
+date: "9/26/2018"
+output: pdf_document
+---
+
+1. Suppose cov(Xt,Xt−k) = γk is free of t but that E(Xt) = 3t.
+(a) Is Xt stationary?
+No, the expected value must be independent of t
+  
+(b) LetYt =7-3t+Xt. Is Yt stationary?
+E[Yt] = E[7-3t+Xt] = 7 - 3t + 3t = 7
+
+var(Yt) = var(7-3t+Xt) = var(Xt) = cov(Xt, Xt) = γ0
+
+cov(Yt, Yt-k) = cov(7-3t+Xt, 7-3t+Xt-k) = cov(Xt, Xt-k) = γk
+
+Yes, Yt is stationary because mean, variance, and autocovariance are all independent of t
+
+(c) Simulate 100 observations for both Xt and Yt and plot as a time series. Check if your answer for parts a and b are consistent with your simulation.
+
+```{r}
+set.seed(2018)
+time <- 1:100
+noise <- rnorm(100, mean=0, sd=10)
+X_t <- c()
+
+for (t in time) {
+  X_t[t] <- 3*t + noise[t]
+}
+
+plot.ts(X_t)
+```
+
+```{r}
+Y_t <- c()
+for (t in time){
+  Y_t[t] <- 7 - 3*t + X_t[t]
+}
+
+plot.ts(Y_t)
+```
+
+Simulation is consistent with analytical solution.
+
+2. Let Xt be a stationary time series, and define Yt = Xt when t is odd and Xt + 3 when t is even
+(a) Show that cov(Yt,Yt-k) is free of t for all lags k.
+odd t and k
+cov(Xt, Xt-k + 3) = cov(Xt, Xt-k) = γk
+odd k even t or odd t even k
+cov(Xt, Xt-k) = γk
+even t and k
+cov(Xt + 3, Xt-k + 3) = cov(Xt, Xt-k) = γk
+
+(b) Is Yt stationary?
+t is odd
+E[Yt] = E[Xt] = constant
+t is odd
+E[Yt] = E[Xt+3] = 3 + constant
+
+var(Yt) = var(Xt + 3) = var(Xt) = constant
+
+Yes, Yt is stationary because mean, variance, and autocovariance are all independent of t
+
+(c) Plot 100 simulated observations for the random variable Yt and comment on your finding.
+
+```{r}
+X_t <- c()
+for (t in time) {
+  X_t[t] <- rnorm(1)
+}
+
+Y_t <- c()
+for (t in time) {
+  if (t %% 2 == 0) {
+    Y_t[t] <- X_t[t]
+  }
+  else {
+    Y_t[t] <- X_t[t] + 3
+  }
+}
+
+plot.ts(X_t)
+plot.ts(Y_t)
+```
+
+Simulation shows Yt is indeed stationary using Xt~N(0,1)
+
+3. Random Cosine Wave Let Yt = cos(2π(t/12 + φ)) where φ is selected from a uniform distribution on the interval 0 to 1.
+
+(a) Find the expected value and variance of Yt
+E[Yt] = ∫Yt dφ = ∫cos(2π(t/12 + φ)) dφ  = 1/2pi sin[2pi(t/12)+φ] evaluated from 0 to 1
+= 1/2pi [sin(2pi(t/12+1)) - sin(2pi(t/12))] = 1/2pi[0] = 0
+
+Var[Yt] = E[Yt^2] - (E[Yt])^2 = E[Yt^2] = ∫cos^2(2pi(t/12+φ))dφ
+= 1/2∫cos(4pi(t/12+φ))+1dφ = 1/2[1/4pi sin(4pi(t/12+φ)) + 1] evaluated from 0 to 1
+= 1/8pi[sin(4pi(t/12+1)) - sin(4pi(t/12))] + 1/2 = 1/2
+
+(b) plot 100 simulated observations and check if there is any trend.
+
+```{r}
+Y_t <- c()
+noise <- runif(100, min = 0, max = 1)
+for (t in time) {
+  Y_t[t] <- cos(2*pi*(t/12 + noise[t]))
+}
+
+plot.ts(Y_t)
+```
+
+Yt does not show any trend, as it is stationary.
+
+\end{document}

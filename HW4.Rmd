@@ -1,0 +1,218 @@
+---
+title: "HW4"
+author: "Avery Loftin"
+date: "10/7/2018"
+output: pdf_document
+---
+
+```{r}
+library(TSA)
+```
+
+1. The data file wages contains monthly values of the average hourly wages (in dollars) for workers in the U.S. apparel and textile products industry for July 1981 through June 1987.
+
+```{r}
+data(wages)
+```
+
+(a) Display and interpret the time series plot for these data.
+
+```{r}
+plot(wages)
+```
+
+The average salary shows an upward trend with constant variance. These data also show signs of seasonality with positive correlation between each month of the years.
+
+
+(b) Use least squares to fit a linear time trend to this time series. Interpret the regression output. Save the standardized residuals from the fit for further analysis.
+
+```{r}
+lm <- lm(wages ~ time(wages))
+summary(lm)
+plot(wages)
+abline(lm, col="red")
+```
+
+The summary of the linear model suggests that both the intercept and slope values are very statistically significant in modeling the change of wages, meaning they are different from zero. The F Test also has a very small p-value, meaning that both the parameters in the model are different from zero holding the other one constant.
+
+(c) Construct and interpret the time series plot of the standardized residuals from part (b).
+
+```{r}
+plot.ts(lm$residuals, col="blue")
+points(lm$residuals, col="blue")
+abline(h=0, col="red")
+qqnorm(lm$residuals, col="blue")
+qqline(lm$residuals, col="red")
+acf(lm$residuals)
+```
+
+Although the model summary suggests the linear model is appropriate here, it fails to satisfy the requirement that the residuals are normally distributed. The QQ Plot shows a lot of concavity and skewness toward the tails. The residual plot also has a distinct pattern rather than the points being evenly scattered about zero. Furthermore, the autocorrelation function of residuals shows that there are statistically significant correlations between points separated by various lags. Normally distributed points would not show any significant autocorrelation.
+
+(d) Use least squares to fit a quadratic time trend to the wages time series (i.e yt = $\beta_0 +\beta_1t+\beta_3t^2 +e_t$). Interpret the regression output. Save the standardized residuals from the fit for further analysis.
+
+```{r}
+squaredTerm <- time(wages)^2
+nlm <- lm(formula = wages ~ time(wages) + squaredTerm)
+summary(nlm)
+
+plot(wages)
+lines(y=predict(nlm),x=time(wages), col="red", type="l")
+```
+
+The summary suggests that all of the parameters are statistically significant, and therefore different from zero.
+
+(e) Construct and interpret the time series plot of the standardized residuals from part (d).
+
+```{r}
+plot.ts(nlm$residuals, col="blue")
+points(nlm$residuals, col="blue")
+abline(h=0, col="red")
+qqnorm(nlm$residuals, col="blue")
+qqline(nlm$residuals, col="red")
+acf(nlm$residuals)
+```
+
+Although the model summary suggests the quadratic model is appropriate here, like the linear model, it fails to satisfy the requirement that the residuals are normally distributed. The QQ Plot shows a lot of concavity and skewness toward the tails. The residual plot also has a distinct pattern rather than the points being evenly scattered about zero. Lastly, the ACF shows that there is correlation between data points of various lags, also implying the residuals are not normally distributed.
+
+2. The data file winnebago contains monthly unit sales of recreational vehicles from Winnebago, Inc., from November 1966 through February 1972.
+
+```{r}
+data("winnebago")
+```
+
+
+(a) Display and interpret the time series plot for these data.
+
+```{r}
+plot(winnebago)
+```
+
+The monthly unit sales of recreational vehicles shows an upward trend with increasing variance from 1966 to 1972. There is also seasonality year to year.
+
+(b) Use least squares to fit a line to these data. Interpret the regression output. Plot the standardized residuals from the fit as a time series. Interpret the plot.
+
+```{r}
+lm <- lm(winnebago ~ time(winnebago))
+summary(lm)
+plot(winnebago)
+abline(lm, col="red")
+```
+
+The summary of the linear model suggests that both the intercept and slope values are very statistically significant in modeling these data, meaning these parameters are different from zero. The F Test also has a very small p-value, meaning that both the parameters in the model are different from zero holding the other one constant.
+
+```{r}
+plot.ts(lm$residuals, col="blue")
+points(lm$residuals, col="blue")
+abline(h=0, col="red")
+qqnorm(lm$residuals, col="blue")
+qqline(lm$residuals, col="red")
+acf(lm$residuals)
+```
+
+The residual plot of this linear model shows heteroscedasticity as the variance increases dramatically with time. This finding, along with the skewed tails on the QQ Plot suggest that the error term is not normally distributed, making this a poor model to use. The ACF is promising, however these data are highly correlated for a lag of 1 and 2.
+
+(c) Now take natural logarithms of the monthly sales figures and display and interpret the time series plot of the transformed values.
+
+```{r}
+log_winnebago <- log(winnebago)
+plot(log_winnebago)
+```
+
+The log of the vehical unit sales shows an upward trend with seasonality, but now with constant variance.
+
+(d) Use least squares to fit a line to the logged data. Display and interpret the time series plot of the standardized residuals from this fit.
+
+```{r}
+lm <- lm(log_winnebago ~ time(winnebago))
+summary(lm)
+plot.ts(log_winnebago)
+abline(lm, col="red")
+```
+
+Again, the summary of the linear model suggests that both the model parameters are very statistically significant in modeling these data, meaning these parameters are different from zero. The F Test also has a very small p-value, meaning that both the parameters in the model are different from zero holding the other one constant.
+
+```{r}
+plot.ts(lm$residuals, col="blue")
+points(lm$residuals, col="blue")
+abline(h=0, col="red")
+qqnorm(lm$residuals, col="blue")
+qqline(lm$residuals, col="red")
+acf(lm$residuals)
+```
+
+While the model summary suggests that the linear model is a good fit, the residual plot, while better than the residual plot for the untransformed data, still shows an uneven distribution about zero. Furthermore, the QQ Plot shows a lot of skewness on the left tail. For these reasons, a linear model is still not a good fit. Like the ACF for the untransformed data, there is high correlation for a lag of 1, also suggesting that the error term is not normally distributed.
+
+(e) Now use least squares to fit a seasonal-means plus linear time trend to the logged sales time series and save the standardized residuals for further analysis. Check the statistical significance of each of the regression coefficients in the model.
+
+```{r}
+nls <- lm(log_winnebago ~ time(log_winnebago) + season(log_winnebago))
+summary(nls)
+plot(log_winnebago)
+lines(y=predict(nls), x=time(log_winnebago), type="l", col="red")
+```
+
+All of the parameters in the seasonal-means plus linear time trend model are very statistically significant, meaning they are different from zero.
+
+(f) Display the time series plot of the standardized residuals obtained in part (e). Interpret the plot.
+
+```{r}
+plot.ts(nls$residuals, col="blue")
+points(nls$residuals, col="blue")
+abline(h=0, col = "red")
+qqnorm(nls$residuals, col="blue")
+qqline(nls$residuals, col="red")
+acf(nls$residuals)
+```
+
+The residual plot is not evenly distributed about zero, the qqplot shows some concavity towards the tails, and the acf shows correlation with the first two lags. All of these findings suggest the error term is not normally distributed, making this a poor model to use.
+
+3)
+
+The data file prescrip gives monthly U.S. prescription costs for the months August 1986 to March 1992. These data are from the State of New Jerseys Prescription Drug Program and are the cost per prescription claim.
+
+```{r}
+data("prescrip")
+```
+
+(a) Display and interpret the time series plot for these data. Use plotting symbols that permit you to look for seasonality.
+
+```{r}
+plot(prescrip)
+points(y=prescrip, x=time(prescrip), pch=as.vector(season(prescrip)))
+```
+
+The monthly U.S. perscription costs shows an upward trend with increasing variance from 1986 to 1992. There is also seasonality year to year.
+
+(b) Calculate and plot the sequence of month-to-month percentage changes in the prescription costs. Again, use plotting symbols that permit you to look for seasonality.
+
+```{r}
+change <- diff(prescrip)/prescrip
+plot(change)
+points(y=change, x=time(change), pch=as.vector(season(change)))
+```
+
+This plot clearly depicts seasonality, as months such as March, April, and May consistently appear at the peaks, and the months October and December are often at the troughs.
+
+(c) Use least squares to fit a cosine trend with fundamental frequency 1/12 to the percentage change series. Interpret the regression output. Save the standardized residuals.
+
+```{r}
+nlm <- lm(change ~ time(change) + harmonic(change))
+summary(nlm)
+plot(change)
+lines(y=predict(nlm), x=time(change), type="l", col="red")
+```
+
+Only the sine term is very statistically significant, while p-value for the cosine term is a moderate .0458. The intercept and slope terms are not statistically significant, and we therefore cannot reject the null hypothesis that they are zero. However, the F Test suggests that the terms are different from zero when all others are held constant. Still, the R-squared value is a meager .3149, meaning a significant amount of information is lost in this model, making it a very poor choice.
+
+(d) Plot the sequence of standardized residuals to investigate the adequacy of the cosine trend model. Interpret the plot.
+
+```{r}
+plot.ts(nlm$residuals, col="blue")
+points(nlm$residuals, col="blue")
+abline(h=0, col="red")
+qqnorm(nlm$residuals, col="blue")
+qqline(nlm$residuals, col="red")
+acf(nlm$residuals)
+```
+
+The QQ plot has concavity on the tails, however, some of these points appear to be outliers. The residual plot is well distributed about 0 and the acf suggests that there is no autocorrelation. These findings suggest the error term is likely normally distributed, but the terrible R-squared value means this normality is likely due to the model consistently failing to capture any of the volitility in these data, and merely sticking close to the mean.

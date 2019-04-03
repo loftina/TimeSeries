@@ -1,0 +1,175 @@
+---
+title: "HW5-Avery"
+author: "Avery Loftin"
+date: "10/20/2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r, warning=FALSE, message=FALSE}
+library(forecast)
+library(quantmod)
+library(TSA)
+```
+
+
+1. Use arima.sim to simulate 100 observations for the following MA(2) models with parameters as specifies
+and sketch their corresponding autocorrelation functions. Use par(mfrow=c(2,2)) to display the acf
+as a matrix form.
+
+(a) $\theta_1$ = .5, $\theta_2$ = 0.4
+
+```{r}
+MA2_.5_.4 <- arima.sim(model = list(ma=c(.5,.4)), n = 100)
+```
+
+(b) $\theta_1$ = 1.2, $\theta_2$ = -.7
+
+```{r}
+MA2_1.2_.7 <- arima.sim(model = list(ma=c(1.2,-.7)), n = 100)
+```
+
+(c) $\theta_1$ = -1, $\theta_2$ = -0.6
+
+```{r}
+MA2_1_.6 <- arima.sim(model = list(ma=c(-1,-.6)), n = 100)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot.ts(MA2_.5_.4)
+plot.ts(MA2_1.2_.7)
+plot.ts(MA2_1_.6)
+```
+
+```{r}
+par(mfrow=c(2,2))
+acf(MA2_.5_.4)
+acf(MA2_1.2_.7)
+acf(MA2_1_.6)
+```
+
+2. Use arima.sim to simulate 100 observations for the following AR(p) models with parameters as specifies
+and sketch their corresponding autocorrelation functions. Use par(mfrow=c(2,2)) to display the acf
+as a matrix form.
+
+(a) $\phi_1$ = .6
+
+```{r}
+AR1_.6 <- arima.sim(model = list(ar=c(.6)), n = 100)
+```
+
+(b) $\phi_1$ = 0.95
+
+```{r}
+AR1_.95 <- arima.sim(model = list(ar=c(.95)), n = 100)
+```
+
+
+(c) $\phi_1$= .4, $\phi_2$ = 0.5
+
+```{r}
+AR2_.4_.5 <- arima.sim(model = list(ar=c(.4,.5)), n = 100)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot.ts(AR1_.6)
+plot.ts(AR1_.95)
+plot.ts(AR2_.4_.5)
+```
+
+```{r}
+par(mfrow=c(2,2))
+acf(AR1_.6)
+acf(AR1_.95)
+acf(AR2_.4_.5)
+```
+
+```{r}
+par(mfrow=c(2,2))
+pacf(AR1_.6)
+pacf(AR1_.95)
+pacf(AR2_.4_.5)
+```
+
+3. Use your own data set to answer the following questions.
+
+```{r, warning=FALSE, message=FALSE}
+getSymbols("AAPL", from="2016-01-01", to="2018-01-01")
+AAPL_log_diff <- diff(log(AAPL$AAPL.Close))
+AAPL_log_diff <- AAPL_log_diff[-1]
+```
+
+(a) Plot the data set as a time series and comment if there is any trend and/or seasonality.
+
+```{r}
+plot.ts(AAPL_log_diff)
+```
+
+The log difference of Apple's closing stock prices from 2016 to 2018 shows no seasonality or trend.
+
+(b) Sketch the autocorrelation function up to lag of 30 and decide if MA, AR, or ARIMA would be an
+appropriate model to use.
+
+```{r}
+acf(AAPL_log_diff, lag.max = 30)
+```
+
+The acf doesn't seem to support the use of either model, as there are no significant correlations. When a MA is a good fit, there would be at least one significant lag at the start with all the rest zero. When an AR model is appropriate, the lags exponentially decay toward zero.
+
+(c) Use the auto.arima(data) to determine the number of lags you would need for AR and/or MA
+model and write the model using parameter estimates.
+
+```{r}
+auto.arima(AAPL_log_diff)
+```
+
+auto.arima suggests using an ARMA(3,2) model.
+$Y_t=.0301*Y_{t-1}-.4528*Y_{t-2}-.0502*Y_{t-3}+.027*e_{t-1}+.4374*e_{t-2}+e_t$
+
+(d) Now, use 75% of the data to train the model and plot both your original data and the predicted
+data. Use different colors
+
+```{r}
+AAPL_log_diff_Train <- AAPL_log_diff[1:377]
+AAPL_log_diff_Test <- AAPL_log_diff[378:length(AAPL_log_diff)]
+
+Model <- auto.arima(AAPL_log_diff_Train)
+
+plot(forecast(Model, 125))
+
+prediction <- forecast(Model, 125)
+
+testandpredict <- data.frame(AAPL=AAPL_log_diff_Test, Predict=prediction$mean)
+
+ts.plot(testandpredict, col=rainbow(2), main="Log Diff: blue=prediction, red=test data")
+```
+
+```{r}
+AAPL_diff <- diff(AAPL$AAPL.Close)[-1]
+
+AAPL_diff_Train <- AAPL_diff[1:377]
+AAPL_diff_Test <- AAPL_diff[378:length(AAPL_diff)]
+
+Model <- auto.arima(AAPL_diff_Train)
+
+plot(forecast(Model, 125))
+
+prediction <- forecast(Model, 125)
+
+testandpredict <- data.frame(AAPL=AAPL_diff_Test, Predict=prediction$mean)
+
+ts.plot(testandpredict, col=rainbow(2), main="Diff: blue=prediction, red=test data")
+```
+
+I tried predicting for both the logged and untrasformed differences and found nearly the exact same results.
+
+e) Calculate MSE for the predicted value and decide if it is a reasonable model to use.
+
+```{r}
+MSE <- mean((ts(AAPL_log_diff_Test, start = c(378,1))-testandpredict$Predict)^2)
+cat(MSE)
+```
+

@@ -1,0 +1,146 @@
+---
+title: "The Effect of Gun Regulation on Suicide"
+author: "Avery Loftin"
+date: "11/7/2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r, warning=FALSE, message=FALSE}
+library(TSA)
+library(forecast)
+```
+
+Australia's strict regulations on guns, including the ban of firearms for self defense, creation of a log of all gun serial numbers and their owners, requirement of a firearms license, and tight leash on semi-automatic weapons, have made the country a figurehead in the movement to restrict access to firearms. Following the Port Arthur massacre, in 1996 Australia passed the National Firearms Agreement to place severe restrictions on semi-automatic weapons and held a manditory buyback to destroy over 1 million guns now deemed illegal to own. DataMarket posses a dataset containing the number of suicides per 100,000 people in Australia from 1815 to 2004. The dataset is split into suicides involving firearms, and those done with different methods. After the passing of the National Firearms Agreement, many anylists have claimed that mass shootings, armed crimes, and of particular interest, gun suicides, have decreased. An employee from online retailer Wayfair illustrated the power of utilizing time series anlysis to assess the effect of a change by modeling the dataset prior to the change and comparing its prediction to the actual data seen after the change. To this effect, the following study trains an ARMA model on the difference between the number of suicides commited without a firearm and with a firearm. According to other anylists, the predictions created by this model should underpredict the actual difference between these categories, assuming that less people commited suicide with firearms after the National Firearms Agreement Passed.
+
+```{r}
+AusSuicide <- read.csv("/Users/loftina/Downloads/deaths-from-homicides-and-suicid.csv", header = TRUE)
+
+names(AusSuicide) <- c("Year", "Suicides w/o Firearm")
+
+AusSuicide.ts <- ts(AusSuicide$`Suicides w/o Firearm`, start = c(1915, 1), frequency = 1)
+```
+
+```{r}
+AusSuicideFirearm <- read.csv("/Users/loftina/Downloads/AusFirearmSuicide.csv", header = TRUE)
+
+names(AusSuicideFirearm) <- c("Year", "Suicides with Firearm")
+
+AusSuicideFirearm.ts <- ts(AusSuicideFirearm$`Suicides with Firearm`, start = c(1915, 1), frequency = 1)
+```
+
+
+```{r}
+NonMinusFireFull <- AusSuicide.ts - AusSuicideFirearm.ts
+```
+
+```{r}
+par(mfrow=c(3,1))
+plot.ts(AusSuicide.ts, main="Suicides in Australia Not Using Firearm",
+        xlab="Time (1915-2004)",
+        ylab="Suicides Per 100,000 People")
+plot.ts(AusSuicideFirearm.ts, main="Suicides in Australia Using Firearm",
+        xlab="Time (1915-2004)",
+        ylab="Suicides Per 100,000 People")
+plot.ts(NonMinusFireFull, main="Suicides Not Using Firearm Minus Using a Firearm",
+        xlab="Time (1915-2004)",
+        ylab="Suicides Per 100,000 People")
+```
+
+The plots above show that suicides using a firearm drastically decreased after 1996, suggesting that analysts are correct in stating that gun related suicides have greatly decreased due to regulation. However, suicides not involving firearms also decreases during that period. The ARMA model will help decide whether this aparent drop in gun suicides is real or simply a result of an overall drop in suicide in Australia.
+
+In order to properly fit an ARMA model, these data must be integrated once to achieve sationarity. The following plot depicts these data in a staionary form.
+
+```{r}
+NonMinusFire <- NonMinusFireFull[1:82]
+NonMinusFire <- ts(NonMinusFire, start=c(1915,1), frequency=1)
+
+NonMinusFire.diff <- diff(NonMinusFire)
+NonMinusFire.diff <- ts(NonMinusFire.diff, start=c(1916,1), frequency=1)
+
+plot.ts(NonMinusFire.diff, main="Integration of w/o Minus w/ Firearm",
+        ylab="Integrated Suicides",
+        xlab="Time (1915-2004)")
+```
+
+Fitting an arma model to these staionary data, a combination of AR(1) and MA(1) seems to be ideal. The ACF shows one significant lag at lag 1, as is expected when an MA(1) model is appropriate. Futhermore, the PACF shows 1 signigicant lag at lag 1, which is what one would expect to see when an AR(1) model is appropriate.
+
+```{r}
+model8 <- auto.arima(NonMinusFire.diff)
+model8
+
+par(mfrow=c(2,1))
+acf(NonMinusFire.diff, main="ACF of Stationary")
+pacf(NonMinusFire.diff, main="PACF of Stationary")
+```
+
+To ensure this model is valid, the residuals must be checked for normality. The following histogram shows a slight right skew, the residual plot shows slight bunching and outliers at various spots, and the QQ Plot depicts significant skewness towards the tails. These all suggest that this model does not quite meet the normality assumption. For the sake of keeping the show going, let's assume the residuals are sufficiently normal. However, acknowldge that the results found further down have inherent flaws.
+
+```{r}
+par(mfrow=c(2,2))
+hist(model8$residuals, main = "Histogram of Model Residuals",
+     xlab="Residuals")
+
+plot(model8$residuals, type="p", ylab="Residuals", main="Residual Plot", col="blue")
+abline(h=0, col="red")
+
+qqnorm(model8$residuals, col="blue")
+qqline(model8$residuals, col="red")
+``` 
+
+Although the normality condition for the residuals was not entirely met, the following Box-Ljung test implies that we sufficiently fail to reject the null hypothesis that the residuals do not have significant autocorrelation. This is an ideal result with a large p-value of .6883. While this suggests that the residuals show signs of being random noise, the finding above that they do not follow a normal distribution takes away from the importance of this finding.
+
+```{r}
+Box.test(model8$residuals, lag=8, fitdf = 2, type = "Ljung-Box")
+```
+
+The following plot depicts the original data, predicted value, and upper and lower 95% confidence interval. As we expected to find, the actual difference between gun suicides and suicides involving other methods hit much higher values than we'd expected to see had this gun reform not passed. The mean squared error is also relatively large at 2.4. This suggests that the reform may have led to a decrease in the number of suicides carried out by firearms.
+
+```{r}
+predicted <- predict(model8,8)
+predictedValue <- predicted$pred
+predictedSe <- predicted$se
+
+predScaled <- c()
+predScaled[1] <- predictedValue[1] + NonMinusFire[length(NonMinusFire)]
+
+for (i in 2:length(predictedValue)){
+  predScaled[i] <- predictedValue[i] + predScaled[i-1]
+}
+
+predUC <- c()
+predLC <- c()
+
+predUC[1] <- (predictedValue[1] + 1.96*predictedSe[1]) + NonMinusFire[length(NonMinusFire)]
+predLC[1] <- (predictedValue[1] - 1.96*predictedSe[1]) + NonMinusFire[length(NonMinusFire)]
+
+for (i in 2:length(predictedValue)){
+  predUC[i] <- (predictedValue[i] + 1.96*predictedSe[i]) + predScaled[i-1]
+  predLC[i] <- (predictedValue[i] - 1.96*predictedSe[i]) + predScaled[i-1]
+}
+
+predScaled <- ts(predScaled, start=c(1997, 1), frequency=1)
+predUC <- ts(predUC, start=c(1997, 1), frequency=1)
+predLC <- ts(predLC, start=c(1997, 1), frequency=1)
+
+plot.ts(NonMinusFireFull, xlim=c(1915, 2004), main="Actual and Predicted Data",
+        ylab="Difference of Suicides w/o and w/ Firearms")
+lines(predScaled, col="green")
+lines(predUC, col="red")
+lines(predLC, col="red")
+legend("topleft", c("Actual", "Predicted", "95% CI"), col=c("black", "green", "red"), lty=c(1,1,1))
+
+NonMinusFire.test <- NonMinusFireFull[82:length(NonMinusFireFull)]
+
+sqErr <- c()
+for (i in 1:length(predScaled))
+{
+  sqErr[i] <- (NonMinusFire.test[i] - predScaled[i])^2
+}
+
+MSE <- sum(sqErr)/length(sqErr)
+MSE
+```
+
+Overall, the results of this study are inconclusive, but do suggest there may be a correlation between a drop in gun suicides as a result of reform. The inconclusivity comes from the nonnormality of the model's residuals. Furthermore, the actual data values do drop significantly to almost the exact value predicted. Perhaps the large jump not captured in the model was merely an outlier. In the end, correlation between a jump in the difference between suicides without guns and with guns with the date a piece of legislation passed does not assure causation.

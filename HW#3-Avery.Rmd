@@ -1,0 +1,100 @@
+---
+title: "Time Series Home work 3"
+author: "Avery Loftin"
+date: "9/26/2018"
+output: pdf_document
+---
+
+## Question 1
+(a) No, the expected value must be independent of t
+
+(b) $E[Y_t]=E[7-3t+X_t]=7-3t+3t=7$
+
+$\newline Var(Y_t)=Var(7-3t+X_t)=Var(X_t)=Cov(X_t,X_t)=\gamma _0$
+
+$Cov(Y_t,Y_{t-k})=Cov(7-3t+X_t,7-3t+X_{t-k})=\gamma_k$
+
+Yes, $\gamma_t$ is stationary because mean, variance, and autocovariance are all independent of t
+
+(c)
+```{r}
+set.seed(2018)
+time <- 1:100
+noise <- rnorm(100, mean=0, sd=10)
+X_t <- c()
+
+for (t in time) {
+  X_t[t] <- 3*t + noise[t]
+}
+
+plot.ts(X_t)
+Y_t <- c()
+for (t in time){
+  Y_t[t] <- 7 - 3*t + X_t[t]
+}
+
+plot.ts(Y_t)
+```
+
+Simulation is consistent with analytical solution.
+
+## Question 2
+
+(a) odd $t$ and $k$
+$cov(X_t, X_{t-k} + 3) = cov(X_t, X_{t-k}) = \gamma _k$
+
+odd $k$ even $t$ or odd $t$ even $k$
+$Cov(X_t, X_{t-k}) = \gamma _k$
+even $t$ and $k$
+$Cov(X_t + 3, X_{t-k} + 3) = cov(X_t, X_{t-k}) = \gamma _k$
+
+(b)
+$t$ is odd
+$E[Y_t] = E[X_t] = constant$
+$t$ is odd
+$E[Yt]$ = $E[Xt+3] = 3 + constant$
+
+$Var(Y_t) = Var(X_t + 3) = Var(X_t) = constant$
+
+Yes, $Y_t$ is stationary because mean, variance, and autocovariance are all independent of $t$
+```{r}
+X_t <- c()
+for (t in time) {
+  X_t[t] <- rnorm(1)
+}
+
+Y_t <- c()
+for (t in time) {
+  if (t %% 2 == 0) {
+    Y_t[t] <- X_t[t]
+  }
+  else {
+    Y_t[t] <- X_t[t] + 3
+  }
+}
+
+plot.ts(X_t)
+plot.ts(Y_t)
+```
+
+Simulation shows $Y_t$ is indeed stationary using $X_t$~$N(0,1)$
+
+## Question 3
+
+(a) $E[Y_t] = \int{Y_t}d\varphi = \int cos(2\pi(\frac{t}{12} + \varphi) d\varphi = \frac{1}{2}\pi sin[2\pi(\frac{t}{12})+\varphi]$ evaluated from $0$ to $1$ $= \frac{1}{2}\pi [sin(2\pi(\frac{t}{12}+1)) - sin(2\pi(\frac{t}{12}))] = \frac{1}{2}\pi[0] = 0$
+
+$Var[Y_t] = E[{Y_t}^2] - (E[Y_t])^2 = E[Y_t^2] = \int cos^2(2\pi(\frac{t}{12}+\varphi))d\varphi= \frac{1}{2}\int cos(4\pi(\frac{t}{12}+\varphi))+1d\varphi = \frac{1}{2}[\frac{1}{4\pi} sin(4\pi(\frac{t}{12}+\varphi)) + 1]$ evaluated from $0$ to $1$$= \frac{1}{8}\pi[sin(4\pi(\frac{t}{12}+1)) - sin(4\pi(\frac{t}{12}))] + \frac{1}{2} = \frac{1}{2}$
+
+(b)
+```{r}
+Y_t <- c()
+noise <- runif(100, min = 0, max = 1)
+for (t in time) {
+  Y_t[t] <- cos(2*pi*(t/12 + noise[t]))
+}
+
+plot.ts(Y_t)
+```
+
+$Y_t$ does not show any trend, as it is stationary.
+
